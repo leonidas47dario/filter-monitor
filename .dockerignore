@@ -1,0 +1,9 @@
+# Keep secrets, footage and docs out of the image
+.env
+.env.*
+data/
+.git/
+.venv/
+venv/
+docs/
+**/__pycache__/
