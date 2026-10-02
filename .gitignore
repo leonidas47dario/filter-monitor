@@ -1,0 +1,31 @@
+# Secrets (Wyze credentials, push/notification keys)
+.env
+.env.*
+!.env.example
+
+# Camera footage and snapshots — keep out of the repo
+data/
+clips/
+snapshots/
+*.mp4
+*.mkv
+*.avi
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Model weights
+*.pt
+*.onnx
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+~$*.docx
