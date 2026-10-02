@@ -1,0 +1,33 @@
+# Filter Monitor — camera configuration (no secrets in this file).
+#
+# How passwords work:
+#   1. Copy .env.example to .env in the repo root (it's gitignored — never commit it).
+#   2. Fill in each camera's RTSP password in .env.
+#   3. The monitor builds each stream URL at runtime as:
+#        {protocol}://{username}:{password}@{host}:{port}{path}
+#      reading the password from the named environment variable.
+#
+# To add a camera: copy a block, set its fields, add the matching
+# *_RTSP_PASSWORD line to .env.
+
+cameras:
+  - name: cam-v4-40gal
+    tank: "40-gallon"
+    model: "Wyze Cam v4"
+    protocol: rtsps
+    host: 192.168.1.232
+    port: 322
+    path: /stream0
+    username: ryan47liao
+    password_env: CAM_V4_40GAL_RTSP_PASSWORD
+
+  # Template for the next camera (copy, uncomment, fill in):
+  # - name: cam-v3pro-20gal
+  #   tank: "20-gallon"
+  #   model: "Wyze Cam v3 Pro"
+  #   protocol: rtsps
+  #   host: 192.168.1.x
+  #   port: 322
+  #   path: /stream0
+  #   username: <rtsp-username>
+  #   password_env: CAM_V3PRO_20GAL_RTSP_PASSWORD
