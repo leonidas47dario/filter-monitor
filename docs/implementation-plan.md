@@ -22,14 +22,16 @@ Phase 0 is done for the pilot tank: the 40-gallon tank's Cam v4 has RTSP enabled
 
 Goal: prove the feed is dependable and collect the footage the detector will be built and graded on. No model, no alerts.
 
-**Tools (in this repo, run on a PC on the home network):**
+**Where it runs:** everything is packaged with Docker (`docker compose`), so it runs on any always-on machine on the home network: PC, NAS, Raspberry Pi or mini PC. It has to be on the home network because the camera's stream is only reachable there. A cloud VM is possible later via a private VPN link (e.g. Tailscale) to the home network, but it adds a moving part, sends tank video off-site (needs owner approval under NFR-3), and doesn't help during an internet outage. The external heartbeat in 1C covers the "home is down" case either way.
 
-| Command | What it does |
+**Tools (in this repo):**
+
+| Command (see README for Docker / Python syntax) | What it does |
 | --- | --- |
-| `python -m filter_monitor check` | Connection test: network reachability, stream opens, resolution/fps, frozen-frame check, saves a snapshot |
-| `python -m filter_monitor roi` | Draw the flow region on a fresh frame; saved to `config/rois.yaml` |
-| `python -m filter_monitor collect` | Unattended sampler: a short clip every few minutes, logged to a manifest with a motion score, day/night flag and stream errors |
-| `python -m filter_monitor staged` | Guided staged outage: records running → stopped → restarting clips, each labeled |
+| `check` | Connection test: network reachability, stream opens, resolution/fps, frozen-frame check, saves a snapshot |
+| `roi` | Draw the flow region on a fresh frame; saved to `config/rois.yaml` |
+| `collect` | Unattended sampler: a short clip every few minutes, logged to a manifest with a motion score, day/night flag and stream errors |
+| `staged` | Guided staged outage: records running → stopped → restarting clips, each labeled |
 
 Footage stays in `data/` (gitignored), never in the repo or any cloud.
 

@@ -186,3 +186,18 @@ def draw_roi(frame: np.ndarray, roi: tuple[float, float, float, float] | None) -
     x0, y0, x1, y1 = roi_pixels(roi, out.shape[1], out.shape[0])
     cv2.rectangle(out, (x0, y0), (x1 - 1, y1 - 1), (0, 255, 255), 2)
     return out
+
+
+def draw_grid(frame: np.ndarray, step: float = 0.1) -> np.ndarray:
+    """Overlay labeled grid lines at fractions of the frame, for picking an ROI without a GUI."""
+    out = frame.copy()
+    h, w = out.shape[:2]
+    font, scale = cv2.FONT_HERSHEY_SIMPLEX, max(0.4, w / 2400)
+    for i in range(1, round(1 / step)):
+        f = round(i * step, 2)
+        x, y = int(f * w), int(f * h)
+        cv2.line(out, (x, 0), (x, h - 1), (0, 255, 255), 1)
+        cv2.line(out, (0, y), (w - 1, y), (0, 255, 255), 1)
+        cv2.putText(out, f"x={f:g}", (x + 3, int(18 * scale / 0.4)), font, scale, (0, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(out, f"y={f:g}", (3, y - 4), font, scale, (0, 255, 255), 1, cv2.LINE_AA)
+    return out

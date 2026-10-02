@@ -1,0 +1,35 @@
+# Filter Monitor — run with Docker Compose from the repo folder.
+#
+#   docker compose up -d --build           start the collector (restarts on its own)
+#   docker compose logs -f collect         watch it
+#   docker compose down                    stop it
+#   docker compose run --rm tools check    one-off commands: check, roi, staged
+#
+# The camera password is read from .env in this folder (copy .env.example first).
+# Footage lands in ./data and the ROI in ./config, so both survive rebuilds.
+
+x-common: &common
+  build: .
+  image: filter-monitor:latest
+  environment:
+    TZ: America/Chicago   # your local time zone, used for clip names and timestamps
+  volumes:
+    - ./data:/app/data
+    - ./config:/app/config
+    - type: bind          # long form: fails clearly if .env is missing
+      source: ./.env
+      target: /app/.env
+      read_only: true
+
+services:
+  collect:
+    <<: *common
+    command: ["collect"]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  tools:
+    <<: *common
+    profiles: ["tools"]   # not started by `up`; used with `docker compose run --rm tools ...`

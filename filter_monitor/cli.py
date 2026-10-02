@@ -17,7 +17,7 @@ import cv2
 
 from . import config
 from .config import Camera, ConfigError, DATA_DIR
-from .stream import analyze_clip, draw_roi, ffmpeg_path, record_clip, tcp_reachable
+from .stream import analyze_clip, draw_grid, draw_roi, ffmpeg_path, record_clip, tcp_reachable
 
 MANIFEST = DATA_DIR / "manifest.csv"
 MANIFEST_FIELDS = [
@@ -139,7 +139,7 @@ def cmd_check(args) -> int:
             say("INFO", f"motion: ROI {st.motion_roi:g}, whole frame {st.motion_frame:g}")
         else:
             say("INFO", f"motion (whole frame) {st.motion_frame:g}; no ROI yet — "
-                        f"run `python -m filter_monitor roi --camera {cam.name}`")
+                        "run the `roi` command next")
         if st.middle_frame is not None:
             say("OK", f"snapshot saved → {rel(save_snapshot(cam, st.middle_frame, 'check'))}")
 
@@ -156,6 +156,25 @@ def parse_rect(text: str) -> tuple[float, float, float, float]:
     return tuple(parts)
 
 
+def has_gui() -> bool:
+    return "GUI: NONE" not in " ".join(cv2.getBuildInformation().split())
+
+
+def draw_roi_window(cam: Camera, frame) -> tuple[float, float, float, float] | tuple | None:
+    """Let the owner drag a box. Returns the ROI, () if cancelled, None if no window could open."""
+    print("A window will open: drag a box tightly over where the filter's flow is visible "
+          "(outflow lip, surface ripple, bubbles or spray bar). Press ENTER to save, C to cancel.")
+    try:
+        x, y, bw, bh = cv2.selectROI(f"Draw ROI - {cam.name}", frame, showCrosshair=True)
+        cv2.destroyAllWindows()
+    except cv2.error:
+        return None  # GUI build but no display (e.g. a headless Linux box)
+    if bw == 0 or bh == 0:
+        return ()
+    h, w = frame.shape[:2]
+    return (x / w, y / h, bw / w, bh / h)
+
+
 def cmd_roi(args) -> int:
     cams = config.load_cameras([args.camera] if args.camera else None)
     if len(cams) > 1:
@@ -165,25 +184,27 @@ def cmd_roi(args) -> int:
     print(f"Grabbing a frame from {cam.name}…")
     row = capture(cam, 3, session="roi", label="roi", folder="check", audio=False)
     if row["status"] == "error":
-        sys.exit(f"Could not read the stream: {row['error']}\nRun `python -m filter_monitor check` first.")
+        sys.exit(f"Could not read the stream: {row['error']}\nRun the `check` command first.")
     frame = row["_stats"].middle_frame
     h, w = frame.shape[:2]
 
     if args.rect:
         roi = args.rect
     else:
-        print("A window will open: drag a box tightly over where the filter's flow is visible "
-              "(outflow lip, surface ripple, bubbles or spray bar). Press ENTER to save, C to cancel.")
-        try:
-            x, y, bw, bh = cv2.selectROI(f"Draw ROI - {cam.name}", frame, showCrosshair=True)
-            cv2.destroyAllWindows()
-        except cv2.error:
-            sys.exit("This OpenCV build has no GUI (opencv-python-headless?). Install `opencv-python`, "
-                     "or pass the box directly: --rect x,y,w,h (fractions of the frame).")
-        if bw == 0 or bh == 0:
+        roi = draw_roi_window(cam, frame) if has_gui() else None
+        if roi is None:
+            # No screen (e.g. inside Docker): save a gridded frame to read the box off instead.
+            grid = DATA_DIR / "snapshots" / f"{cam.name}_grid_{stamp()}.jpg"
+            grid.parent.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(grid), draw_grid(frame))
+            print(f"\nNo window available to draw in. Open this image instead:\n  {rel(grid)}\n"
+                  "Grid lines are every 0.1 of the width/height. Read off the box around the flow\n"
+                  "(left edge x, top edge y, width w, height h) and run roi again with it, e.g.:\n"
+                  f"  roi --camera {cam.name} --rect 0.60,0.10,0.25,0.25")
+            return 1
+        if roi == ():
             print("No region drawn — nothing saved.")
             return 1
-        roi = (x / w, y / h, bw / w, bh / h)
 
     config.save_roi(cam.name, roi, (w, h))
     cam.roi = roi
